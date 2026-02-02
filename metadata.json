@@ -1,0 +1,5 @@
+{
+  "name": "HTML Font Modifier",
+  "description": "A tool to upload HTML files, change their default font family, preview the changes, and download the result.",
+  "requestFramePermissions": []
+}
