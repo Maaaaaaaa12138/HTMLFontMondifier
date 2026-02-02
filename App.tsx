@@ -4,7 +4,7 @@ import { PreviewFrame } from './components/PreviewFrame';
 import { Button } from './components/Button';
 import { FONT_OPTIONS } from './constants';
 import { UploadedFile, FontOption } from './types';
-import { Type, Download, Trash2, RefreshCw, Smartphone, Monitor } from 'lucide-react';
+import { Type, Download, Trash2, RefreshCw, Smartphone, Monitor, MoveHorizontal } from 'lucide-react';
 
 const App: React.FC = () => {
   const [file, setFile] = useState<UploadedFile | null>(null);
@@ -13,17 +13,35 @@ const App: React.FC = () => {
   const [availableFonts, setAvailableFonts] = useState<FontOption[]>(FONT_OPTIONS);
   const [selectedFont, setSelectedFont] = useState<FontOption>(FONT_OPTIONS[0]);
   const [fontSize, setFontSize] = useState<number>(16);
+  
+  // Table Width State (Pixels)
+  const [tableWidth, setTableWidth] = useState<number>(800);
+  const [maxTableWidth, setMaxTableWidth] = useState<number>(1200);
+
   const [isLoadingFonts, setIsLoadingFonts] = useState(false);
   const [supportsLocalFonts, setSupportsLocalFonts] = useState(false);
 
   const [modifiedHtml, setModifiedHtml] = useState<string>('');
 
-  // Check browser support for local fonts
+  // Check browser support for local fonts and handle window resize for max width
   useEffect(() => {
     // @ts-ignore
     if (window.queryLocalFonts) {
       setSupportsLocalFonts(true);
     }
+
+    const updateMaxWidth = () => {
+      const width = window.innerWidth;
+      setMaxTableWidth(width);
+    };
+
+    // Initial set
+    updateMaxWidth();
+    // Set a reasonable default for table width based on screen if it's too small
+    setTableWidth(prev => Math.min(prev, window.innerWidth - 40));
+
+    window.addEventListener('resize', updateMaxWidth);
+    return () => window.removeEventListener('resize', updateMaxWidth);
   }, []);
 
   const loadLocalFonts = async () => {
@@ -76,18 +94,33 @@ const App: React.FC = () => {
   };
 
   // Logic to inject the font into the HTML string
-  const injectStyles = (html: string, fontValue: string, size: number): string => {
+  const injectStyles = (html: string, fontValue: string, size: number, width: number): string => {
     if (!html) return '';
 
     // Create the style tag to inject
-    // 1. Set base font size on html/body (handles rem/em properly)
-    // 2. Force font-family on all elements
+    // 1. Set base font size on html/body.
+    // 2. Force font-family on all elements.
+    // 3. Specifically target .gt_table to ensure overrides apply to it and its children.
     const styleTag = `<style>
       html, body {
         font-size: ${size}px !important;
       }
       body, body * {
         font-family: ${fontValue} !important;
+      }
+      
+      /* Specific overrides for .gt_table as requested */
+      .gt_table, 
+      .gt_table th, 
+      .gt_table td,
+      .gt_table tr {
+        font-size: ${size}px !important;
+      }
+      
+      .gt_table {
+        width: ${width}px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
       }
     </style>`;
 
@@ -109,15 +142,15 @@ const App: React.FC = () => {
     return newHtml;
   };
 
-  // Update modified HTML whenever file, font, or size changes
+  // Update modified HTML whenever file, font, size, or width changes
   useEffect(() => {
     if (file) {
-      const updated = injectStyles(file.content, selectedFont.value, fontSize);
+      const updated = injectStyles(file.content, selectedFont.value, fontSize, tableWidth);
       setModifiedHtml(updated);
     } else {
       setModifiedHtml('');
     }
-  }, [file, selectedFont, fontSize]);
+  }, [file, selectedFont, fontSize, tableWidth]);
 
   const handleDownload = () => {
     if (!modifiedHtml || !file) return;
@@ -144,6 +177,7 @@ const App: React.FC = () => {
     setModifiedHtml('');
     setSelectedFont(availableFonts[0]);
     setFontSize(16);
+    setTableWidth(Math.min(800, window.innerWidth - 40));
   };
 
   // Group fonts for Select UI
@@ -258,7 +292,7 @@ const App: React.FC = () => {
               </div>
 
               {/* Font Size Control */}
-              <div>
+              <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
                    <label className="block text-sm font-medium text-slate-600">
                     Base Font Size
@@ -279,10 +313,39 @@ const App: React.FC = () => {
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
                 </div>
-                 <p className="mt-3 text-xs text-slate-400">
-                  Sets the root font size. Elements using 'em' or 'rem' will scale accordingly.
+                 <p className="mt-2 text-xs text-slate-400">
+                  Sets size for text and .gt_table content
                 </p>
               </div>
+
+              {/* Table Width Control */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                   <label className="block text-sm font-medium text-slate-600 flex items-center gap-2">
+                    <MoveHorizontal size={14} />
+                    Table Width (px)
+                  </label>
+                  <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
+                    {tableWidth}px
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="100"
+                    max={maxTableWidth}
+                    step="10"
+                    value={tableWidth}
+                    onChange={(e) => setTableWidth(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                </div>
+                 <p className="mt-2 text-xs text-slate-400">
+                  Adjusts absolute width of .gt_table elements (Max: {maxTableWidth}px)
+                </p>
+              </div>
+
             </div>
 
             {/* Action Buttons */}
@@ -310,7 +373,7 @@ const App: React.FC = () => {
               Preview
               {selectedFont && (
                 <span className="text-xs font-normal px-2 py-1 bg-slate-100 rounded-md text-slate-500 flex items-center gap-1">
-                   {selectedFont.label} <span className="text-slate-300">|</span> {fontSize}px
+                   {selectedFont.label} <span className="text-slate-300">|</span> {fontSize}px <span className="text-slate-300">|</span> {tableWidth}px
                 </span>
               )}
              </h2>
