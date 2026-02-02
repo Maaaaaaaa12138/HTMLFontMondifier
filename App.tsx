@@ -100,7 +100,7 @@ const App: React.FC = () => {
     // Create the style tag to inject
     // 1. Set base font size on html/body.
     // 2. Force font-family on all elements.
-    // 3. Specifically target .gt_table to ensure overrides apply to it and its children.
+    // 3. Specifically target table tags to ensure overrides apply to it and its children.
     const styleTag = `<style>
       html, body {
         font-size: ${size}px !important;
@@ -109,15 +109,15 @@ const App: React.FC = () => {
         font-family: ${fontValue} !important;
       }
       
-      /* Specific overrides for .gt_table as requested */
-      .gt_table, 
-      .gt_table th, 
-      .gt_table td,
-      .gt_table tr {
+      /* Specific overrides for generic table as requested */
+      table, 
+      table th, 
+      table td,
+      table tr {
         font-size: ${size}px !important;
       }
       
-      .gt_table {
+      table {
         width: ${width}px !important;
         margin-left: auto !important;
         margin-right: auto !important;
@@ -314,7 +314,7 @@ const App: React.FC = () => {
                   />
                 </div>
                  <p className="mt-2 text-xs text-slate-400">
-                  Sets size for text and .gt_table content
+                  Sets size for text and table content
                 </p>
               </div>
 
@@ -342,7 +342,7 @@ const App: React.FC = () => {
                   />
                 </div>
                  <p className="mt-2 text-xs text-slate-400">
-                  Adjusts absolute width of .gt_table elements (Max: {maxTableWidth}px)
+                  Adjusts absolute width of table elements (Max: {maxTableWidth}px)
                 </p>
               </div>
 
